@@ -1,0 +1,31 @@
+import Foundation
+
+/// Registro central de todos los efectos disponibles en la app.
+///
+/// Para añadir un efecto nuevo:
+/// 1. Crea un tipo que implemente `EffectModule` en `Data/Effects/`.
+/// 2. Añade `EffectDescriptor(TuNuevoEfecto.self)` al array `allDescriptors`.
+/// No es necesario tocar ningún otro archivo: listas, detalle, instrucciones
+/// y práctica se generan automáticamente a partir de la metadata del efecto.
+final class EffectRepository {
+    static let shared = EffectRepository()
+
+    let allDescriptors: [EffectDescriptor]
+
+    private init() {
+        allDescriptors = [
+            EffectDescriptor(ThoughtDetectorEffect.self),
+            EffectDescriptor(AnyCardEffect.self),
+            EffectDescriptor(ParanormalDetectorEffect.self),
+            EffectDescriptor(MagicCalculatorEffect.self)
+        ]
+    }
+
+    func effects(in category: EffectCategory) -> [EffectDescriptor] {
+        allDescriptors.filter { $0.info.category == category }
+    }
+
+    func descriptor(for id: String) -> EffectDescriptor? {
+        allDescriptors.first { $0.info.id == id }
+    }
+}

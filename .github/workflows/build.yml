@@ -1,0 +1,68 @@
+name: Build iTricks
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -switch /Applications/Xcode_16.app/Contents/Developer
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Show available simulators
+        run: xcrun simctl list devicetypes
+
+      - name: Build for iOS Simulator
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project iTricks.xcodeproj \
+            -scheme iTricks \
+            -destination "generic/platform=iOS Simulator" \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcpretty || xcodebuild build \
+            -project iTricks.xcodeproj \
+            -scheme iTricks \
+            -destination "generic/platform=iOS Simulator" \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Build unsigned .app for device (for later manual signing)
+        run: |
+          xcodebuild build \
+            -project iTricks.xcodeproj \
+            -scheme iTricks \
+            -destination "generic/platform=iOS" \
+            -configuration Release \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            -derivedDataPath build
+
+      - name: Package unsigned .app artifact
+        run: |
+          cd build/Build/Products/Release-iphoneos
+          ls -la
+          mkdir -p Payload
+          cp -R iTricks.app Payload/
+          zip -r ../../../../iTricks-unsigned.ipa Payload
+
+      - name: Upload unsigned build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: iTricks-unsigned-ipa
+          path: iTricks-unsigned.ipa
