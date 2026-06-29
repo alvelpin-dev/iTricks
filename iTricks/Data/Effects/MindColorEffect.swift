@@ -2,11 +2,12 @@ import SwiftUI
 
 /// "El Color de la Mente" — Mentalismo.
 ///
-/// Método real: tres atajos distintos, uno por color, cada uno disparado
-/// por una combinación discreta diferente (pulsaciones de volumen, o la
-/// orientación del teléfono). El mago elige cuál activar según el color
-/// que el espectador haya pensado, dando la apariencia de que la
-/// pantalla "sabe" el color sin que nadie la haya tocado.
+/// Método real (integrado en la app): el `CoreMotion` ya integrado en
+/// `SensorManager` mide la inclinación real del teléfono (`roll`). Tres
+/// zonas de inclinación distintas (nivelado, inclinado a la derecha,
+/// inclinado a la izquierda) disparan tres colores distintos tras
+/// mantenerse estable un instante, evitando activaciones accidentales
+/// por el temblor natural de la mano.
 enum MindColorEffect: EffectModule {
     static let info = EffectInfo(
         id: "mind_color",
@@ -66,18 +67,97 @@ enum MindColorEffect: EffectModule {
         ]
     )
 
-    private static let blueprint = ShortcutBlueprint(
-        shortcutName: "Color de la Mente (tres atajos: Rojo, Azul, Verde)",
-        trigger: "Tres disparadores discretos distintos: combinaciones de volumen, o automatización por orientación del teléfono",
-        actions: [
-            "Crea tres atajos, cada uno con 'Abrir foto' a pantalla completa de un color sólido distinto (rojo, azul, verde)",
-            "Asigna a cada atajo una automatización personal distinta: por ejemplo, una combinación de pulsaciones de volumen, o el evento de 'orientación del dispositivo' boca arriba/boca abajo",
-            "Practica cada disparador por separado hasta poder diferenciarlos sin dudar"
-        ],
-        caveat: "Tres disparadores simultáneos son difíciles de gestionar en directo: domina cada uno por separado antes de combinarlos en una actuación real."
-    )
-
-    static func performView() -> AnyView { AnyView(ShortcutEffectPerformView(info: info, accent: .purple)) }
-    static func settingsView() -> AnyView { AnyView(ShortcutEffectSettingsView(title: info.name, blueprint: blueprint)) }
+    static func performView() -> AnyView { AnyView(MindColorPerformView()) }
+    static func settingsView() -> AnyView { AnyView(MindColorSettingsView()) }
     static func practiceView() -> AnyView { AnyView(PracticeView(info: info)) }
+}
+
+private enum TiltZone: Equatable {
+    case level, right, left
+}
+
+private struct MindColorPerformView: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var sensors = SensorManager.shared
+    @State private var revealedColor: Color?
+    @State private var currentZone: TiltZone?
+    @State private var stableTicks = 0
+
+    private let timer = Timer.publish(every: 0.15, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        ZStack {
+            (revealedColor ?? Color.black).ignoresSafeArea()
+
+            VStack(spacing: Theme.Spacing.md) {
+                Spacer()
+                if revealedColor == nil {
+                    Text("Pasa la mano sobre la pantalla")
+                        .font(Theme.Typography.body)
+                        .foregroundStyle(.white.opacity(0.6))
+                }
+                Spacer()
+                Button("Cerrar") { dismiss() }
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(.white.opacity(0.7))
+                    .padding(.bottom, Theme.Spacing.md)
+            }
+        }
+        .onAppear { sensors.startMotionUpdates() }
+        .onDisappear { sensors.stopMotionUpdates() }
+        .onReceive(timer) { _ in evaluateTilt() }
+    }
+
+    private func evaluateTilt() {
+        guard revealedColor == nil else { return }
+
+        let zone: TiltZone
+        if sensors.roll > 0.4 {
+            zone = .right
+        } else if sensors.roll < -0.4 {
+            zone = .left
+        } else if abs(sensors.roll) < 0.15 {
+            zone = .level
+        } else {
+            currentZone = nil
+            stableTicks = 0
+            return
+        }
+
+        if zone == currentZone {
+            stableTicks += 1
+        } else {
+            currentZone = zone
+            stableTicks = 1
+        }
+
+        if stableTicks >= 4 {
+            reveal(for: zone)
+        }
+    }
+
+    private func reveal(for zone: TiltZone) {
+        let color: Color
+        switch zone {
+        case .level: color = .green
+        case .right: color = .red
+        case .left: color = .blue
+        }
+        HapticManager.shared.magicReveal()
+        withAnimation(Theme.AnimationCurve.standard) { revealedColor = color }
+    }
+}
+
+private struct MindColorSettingsView: View {
+    var body: some View {
+        SecretConfigScreen(title: "El Color de la Mente") {
+            Section {
+                Text("Nivelado = verde · Inclinado a la derecha = rojo · Inclinado a la izquierda = azul. Inclina discretamente el teléfono hacia la zona correspondiente mientras pasas la mano por encima; debe mantenerse estable algo menos de un segundo para activarse, evitando temblores accidentales.")
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(.secondary)
+            } header: {
+                Text("Cómo funciona")
+            }
+        }
+    }
 }

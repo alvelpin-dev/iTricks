@@ -2,10 +2,11 @@ import SwiftUI
 
 /// "El Peso Digital Imposible" — Herramientas.
 ///
-/// El iPhone 11 no tiene ningún sensor capaz de pesar objetos reales. El
-/// Atajo simula visualmente una báscula, y el "peso" mostrado depende por
-/// completo de en qué zona de la pantalla el mago indique que se colocó
-/// el objeto, no de ninguna medición física genuina.
+/// El iPhone 11 no tiene ningún sensor capaz de pesar objetos reales.
+/// Esta vista (integrada en la app, sin Atajos) presenta una báscula
+/// simulada con un selector de zona visible: el "peso" mostrado depende
+/// por completo de qué zona se indique antes de colocar el objeto, no de
+/// ninguna medición física genuina.
 enum ImpossibleWeightEffect: EffectModule {
     static let info = EffectInfo(
         id: "impossible_weight",
@@ -69,19 +70,91 @@ enum ImpossibleWeightEffect: EffectModule {
         ]
     )
 
-    private static let blueprint = ShortcutBlueprint(
-        shortcutName: "Báscula de Precisión (interfaz simulada)",
-        trigger: "Se abre manualmente como una app de báscula",
-        actions: [
-            "Añade 'Elegir de menú' preguntando en qué zona se coloca el objeto (por ejemplo: 'Esquina superior derecha' / 'Centro')",
-            "Si la respuesta es 'Esquina superior derecha': añade 'Texto' fijo con el peso real memorizado del objeto",
-            "Si la respuesta es 'Centro': añade 'Número aleatorio' o el texto 'Error de calibración'",
-            "Añade 'Mostrar resultado' con el valor correspondiente"
-        ],
-        caveat: "El iPhone 11 no tiene ningún sensor de presión capaz de pesar objetos reales; todo el efecto depende de que tú indiques siempre la misma zona memorizada para tus propias mediciones."
-    )
-
-    static func performView() -> AnyView { AnyView(ShortcutEffectPerformView(info: info, accent: .gray)) }
-    static func settingsView() -> AnyView { AnyView(ShortcutEffectSettingsView(title: info.name, blueprint: blueprint)) }
+    static func performView() -> AnyView { AnyView(ImpossibleWeightPerformView()) }
+    static func settingsView() -> AnyView { AnyView(ImpossibleWeightSettingsView()) }
     static func practiceView() -> AnyView { AnyView(PracticeView(info: info)) }
+}
+
+private enum WeightZone: String, CaseIterable {
+    case yourZone = "Tu zona"
+    case center = "Centro"
+}
+
+private struct ImpossibleWeightPerformView: View {
+    @Environment(\.dismiss) private var dismiss
+    @AppStorage("impossible_weight_value") private var memorizedWeight = 4.0
+    @State private var selectedZone: WeightZone = .yourZone
+    @State private var resultText: String?
+
+    var body: some View {
+        VStack(spacing: Theme.Spacing.lg) {
+            Spacer()
+            Image(systemName: "scalemass.fill")
+                .font(.system(size: 56))
+                .foregroundStyle(.gray)
+
+            if let resultText {
+                Text(resultText)
+                    .font(.system(size: 40, weight: .bold, design: .rounded))
+                    .transition(.opacity)
+            } else {
+                Text("0,0 g")
+                    .font(.system(size: 40, weight: .bold, design: .rounded))
+                    .foregroundStyle(.secondary)
+            }
+
+            Picker("Zona", selection: $selectedZone) {
+                ForEach(WeightZone.allCases, id: \.self) { zone in
+                    Text(zone.rawValue).tag(zone)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, Theme.Spacing.lg)
+
+            PrimaryButton("Pesar objeto", symbol: "scalemass", tint: .gray) {
+                measure()
+            }
+            .padding(.horizontal, Theme.Spacing.lg)
+
+            Spacer()
+            Button("Cerrar") { dismiss() }
+                .font(Theme.Typography.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(Theme.Spacing.lg)
+        .background(Color.appBackground)
+    }
+
+    private func measure() {
+        HapticManager.shared.impact(.light)
+        withAnimation(Theme.AnimationCurve.standard) {
+            switch selectedZone {
+            case .yourZone:
+                resultText = String(format: "%.1f g", memorizedWeight)
+            case .center:
+                let outcomes = ["Error de calibración", String(format: "%.1f g", Double.random(in: 0...50))]
+                resultText = outcomes.randomElement()
+            }
+        }
+        MagicEngine.performReveal()
+    }
+}
+
+private struct ImpossibleWeightSettingsView: View {
+    @AppStorage("impossible_weight_value") private var memorizedWeight = 4.0
+
+    var body: some View {
+        SecretConfigScreen(title: "El Peso Digital Imposible") {
+            Section("Peso real memorizado del objeto") {
+                Stepper(String(format: "%.1f g", memorizedWeight), value: $memorizedWeight, in: 0...500, step: 0.5)
+            }
+            Section {
+                Text("Pesa tu objeto de antemano en una báscula real e introduce ese valor aquí. Cuando coloques el objeto en 'Tu zona', siempre se mostrará ese peso exacto; en 'Centro', el resultado es aleatorio o un error de calibración.")
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(.secondary)
+            } header: {
+                Text("Cómo funciona")
+            }
+        }
+    }
 }

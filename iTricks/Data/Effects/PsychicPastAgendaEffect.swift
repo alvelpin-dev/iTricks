@@ -2,11 +2,12 @@ import SwiftUI
 
 /// "La Agenda Psíquica del Pasado" — Mentalismo.
 ///
-/// Método real: un Atajo que recibe la fecha de nacimiento dicha por el
-/// espectador y crea, en el momento, un evento de calendario con fecha
-/// retroactiva (el propio día que nació), conteniendo un mensaje
-/// preescrito. El sistema permite crear eventos en cualquier fecha, pasada
-/// o futura, así que el evento aparece "ya estaba ahí" al navegar a ese día.
+/// Método real (integrado en la app): en vez de tocar el Calendario real
+/// del sistema (lo que requeriría permisos y dejaría rastro real),
+/// iTricks renderiza su propia réplica de un mes de calendario con
+/// matemática de fechas real (`Calendar`), navegando hasta el mes y año
+/// exactos de la fecha de nacimiento introducida, con un evento forzado
+/// ya colocado en el día correcto.
 enum PsychicPastAgendaEffect: EffectModule {
     static let info = EffectInfo(
         id: "psychic_past_agenda",
@@ -70,18 +71,118 @@ enum PsychicPastAgendaEffect: EffectModule {
         ]
     )
 
-    private static let blueprint = ShortcutBlueprint(
-        shortcutName: "Agenda Psíquica",
-        trigger: "Se activa manualmente, introduciendo la fecha dicha por el espectador",
-        actions: [
-            "Añade 'Solicitar entrada de texto' (o 'Fecha') para capturar día, mes y año de nacimiento",
-            "Añade 'Crear evento de calendario' usando esa fecha como inicio del evento, con el texto preescrito como título",
-            "Añade 'Abrir calendario' navegando a esa misma fecha como acción final"
-        ],
-        caveat: "El evento se crea en el momento real, no viaja en el tiempo de verdad: la magia está en que el sistema permite asignarle una fecha de inicio pasada."
-    )
-
-    static func performView() -> AnyView { AnyView(ShortcutEffectPerformView(info: info, accent: .brown)) }
-    static func settingsView() -> AnyView { AnyView(ShortcutEffectSettingsView(title: info.name, blueprint: blueprint)) }
+    static func performView() -> AnyView { AnyView(PsychicPastAgendaPerformView()) }
+    static func settingsView() -> AnyView { AnyView(PsychicPastAgendaSettingsView()) }
     static func practiceView() -> AnyView { AnyView(PracticeView(info: info)) }
+}
+
+private struct PsychicPastAgendaPerformView: View {
+    @Environment(\.dismiss) private var dismiss
+    @AppStorage("psychic_agenda_event_text") private var eventText = "Hoy nació la persona que verá este truco en el futuro"
+    @State private var birthDate = Date()
+    @State private var revealed = false
+
+    private var calendar: Calendar { Calendar.current }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: Theme.Spacing.md) {
+                if revealed {
+                    monthGrid
+                } else {
+                    Spacer()
+                    Text("Fecha de nacimiento")
+                        .font(Theme.Typography.headline)
+                    DatePicker("", selection: $birthDate, displayedComponents: .date)
+                        .datePickerStyle(.wheel)
+                        .labelsHidden()
+                    PrimaryButton("Viajar a esa fecha", symbol: "calendar", tint: .brown) {
+                        withAnimation(Theme.AnimationCurve.standard) { revealed = true }
+                        MagicEngine.performReveal()
+                    }
+                    .padding(.horizontal, Theme.Spacing.lg)
+                    Spacer()
+                }
+            }
+            .background(Color.appBackground)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Cerrar") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private var monthGrid: some View {
+        VStack(spacing: Theme.Spacing.sm) {
+            Text(birthDate, format: .dateTime.month(.wide).year())
+                .font(Theme.Typography.title)
+                .padding(.top, Theme.Spacing.md)
+
+            let days = daysInMonth()
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 8) {
+                ForEach(Array(days.enumerated()), id: \.offset) { _, day in
+                    if let day {
+                        VStack(spacing: 2) {
+                            Text("\(day)")
+                                .font(.system(size: 14, weight: isBirthDay(day) ? .bold : .regular))
+                                .foregroundStyle(isBirthDay(day) ? .white : .primary)
+                                .frame(width: 30, height: 30)
+                                .background(isBirthDay(day) ? Color.brown : Color.clear, in: Circle())
+                            if isBirthDay(day) {
+                                Circle().fill(Color.brown).frame(width: 5, height: 5)
+                            }
+                        }
+                    } else {
+                        Color.clear.frame(width: 30, height: 30)
+                    }
+                }
+            }
+            .padding(.horizontal, Theme.Spacing.md)
+
+            if let day = calendar.dateComponents([.day], from: birthDate).day {
+                GlassCard {
+                    Text(eventText)
+                        .font(Theme.Typography.body)
+                }
+                .padding(.horizontal, Theme.Spacing.md)
+                .padding(.top, Theme.Spacing.sm)
+                .id(day)
+            }
+
+            Spacer()
+        }
+    }
+
+    private func daysInMonth() -> [Int?] {
+        guard let range = calendar.range(of: .day, in: .month, for: birthDate) else { return [] }
+        let firstOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: birthDate)) ?? birthDate
+        let weekday = calendar.component(.weekday, from: firstOfMonth)
+        let leadingBlanks = (weekday - calendar.firstWeekday + 7) % 7
+        return Array(repeating: nil, count: leadingBlanks) + range.map { $0 }
+    }
+
+    private func isBirthDay(_ day: Int) -> Bool {
+        calendar.component(.day, from: birthDate) == day
+    }
+}
+
+private struct PsychicPastAgendaSettingsView: View {
+    @AppStorage("psychic_agenda_event_text") private var eventText = "Hoy nació la persona que verá este truco en el futuro"
+
+    var body: some View {
+        SecretConfigScreen(title: "La Agenda Psíquica del Pasado") {
+            Section("Texto del evento forzado") {
+                TextField("Texto del evento", text: $eventText, axis: .vertical)
+            }
+            Section {
+                Text("La app calcula matemáticamente el mes exacto y el día de la semana real de la fecha de nacimiento introducida, mostrando una réplica de calendario con el evento forzado ya colocado en el día correcto.")
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(.secondary)
+            } header: {
+                Text("Cómo funciona")
+            }
+        }
+    }
 }

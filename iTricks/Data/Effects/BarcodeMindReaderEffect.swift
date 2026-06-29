@@ -1,11 +1,14 @@
 import SwiftUI
+import AVFoundation
 
 /// "El Lector de Códigos de Barras Mental" — Mentalismo.
 ///
-/// Método real: un Atajo que abre el escáner de códigos, pero ignora por
-/// completo el resultado real del escaneo. La acción siguiente siempre
-/// muestra una alerta con un texto de personalidad preescrito, dando la
-/// apariencia de un análisis imposible.
+/// Método real (integrado en la app): un escaneo de código real con
+/// `AVCaptureMetadataOutput` (la cámara detecta de verdad el tipo de
+/// símbolo: QR, EAN-13, Code128…). El contenido del código se ignora,
+/// pero el tipo de símbolo detectado sí se usa para elegir, entre varios
+/// textos de personalidad preescritos, cuál mostrar — combinando un dato
+/// real con una respuesta preparada.
 enum BarcodeMindReaderEffect: EffectModule {
     static let info = EffectInfo(
         id: "barcode_mind_reader",
@@ -69,18 +72,93 @@ enum BarcodeMindReaderEffect: EffectModule {
         ]
     )
 
-    private static let blueprint = ShortcutBlueprint(
-        shortcutName: "Escáner de Personalidad",
-        trigger: "Se abre manualmente para escanear cualquier código de barras",
-        actions: [
-            "Añade 'Escanear código QR/de barras' como primera acción",
-            "Ignora el resultado del escaneo: no lo uses en ninguna acción posterior",
-            "Añade 'Mostrar alerta' con el texto de personalidad preescrito en la configuración secreta"
-        ],
-        caveat: "El escaneo debe parecer real (apunta y enfoca con cuidado), aunque su resultado nunca se utilice en el efecto."
-    )
-
-    static func performView() -> AnyView { AnyView(ShortcutEffectPerformView(info: info, accent: .purple)) }
-    static func settingsView() -> AnyView { AnyView(ShortcutEffectSettingsView(title: info.name, blueprint: blueprint)) }
+    static func performView() -> AnyView { AnyView(BarcodeMindReaderPerformView()) }
+    static func settingsView() -> AnyView { AnyView(BarcodeMindReaderSettingsView()) }
     static func practiceView() -> AnyView { AnyView(PracticeView(info: info)) }
+}
+
+private struct BarcodeMindReaderPerformView: View {
+    @Environment(\.dismiss) private var dismiss
+    @StateObject private var camera = CameraController()
+    @AppStorage("barcode_text_qr") private var textForQR = "Eres alguien que conecta ideas distintas con facilidad."
+    @AppStorage("barcode_text_ean") private var textForEAN = "Tienes una memoria mucho mejor de lo que crees."
+    @AppStorage("barcode_text_other") private var textForOther = "Confías en tu instinto más de lo que admites."
+    @State private var resultText: String?
+
+    var body: some View {
+        ZStack {
+            CameraPreviewView(controller: camera).ignoresSafeArea()
+                .overlay(Color.black.opacity(0.15))
+
+            VStack {
+                Spacer()
+                if let resultText {
+                    Text(resultText)
+                        .font(Theme.Typography.headline)
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
+                        .padding(Theme.Spacing.md)
+                        .background(.black.opacity(0.4), in: RoundedRectangle(cornerRadius: Theme.Radius.medium))
+                        .padding(.horizontal, Theme.Spacing.md)
+                } else {
+                    Text("Apunta a cualquier código de barras")
+                        .font(Theme.Typography.body)
+                        .foregroundStyle(.white)
+                }
+                Button("Cerrar") { dismiss() }
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(.white.opacity(0.8))
+                    .padding(.top, Theme.Spacing.sm)
+                    .padding(.bottom, Theme.Spacing.xl)
+            }
+        }
+        .onAppear { camera.start(scansMetadata: true) }
+        .onDisappear { camera.stop() }
+        .onChange(of: camera.lastDetectedSymbology) { symbology in
+            guard let symbology, resultText == nil else { return }
+            reveal(for: symbology)
+        }
+    }
+
+    private func reveal(for symbology: AVMetadataObject.ObjectType) {
+        let text: String
+        switch symbology {
+        case .qr, .pdf417:
+            text = textForQR
+        case .ean13, .ean8, .upce:
+            text = textForEAN
+        default:
+            text = textForOther
+        }
+        HapticManager.shared.impact(.medium)
+        withAnimation(Theme.AnimationCurve.standard) { resultText = text }
+        MagicEngine.performReveal()
+    }
+}
+
+private struct BarcodeMindReaderSettingsView: View {
+    @AppStorage("barcode_text_qr") private var textForQR = "Eres alguien que conecta ideas distintas con facilidad."
+    @AppStorage("barcode_text_ean") private var textForEAN = "Tienes una memoria mucho mejor de lo que crees."
+    @AppStorage("barcode_text_other") private var textForOther = "Confías en tu instinto más de lo que admites."
+
+    var body: some View {
+        SecretConfigScreen(title: "El Lector de Códigos de Barras Mental") {
+            Section("Texto para códigos QR") {
+                TextField("Texto de personalidad", text: $textForQR, axis: .vertical)
+            }
+            Section("Texto para códigos de producto (EAN/UPC)") {
+                TextField("Texto de personalidad", text: $textForEAN, axis: .vertical)
+            }
+            Section("Texto para otros códigos") {
+                TextField("Texto de personalidad", text: $textForOther, axis: .vertical)
+            }
+            Section {
+                Text("El escaneo es real: la cámara detecta de verdad el tipo de código. Según sea QR, un código de producto (EAN/UPC) u otro tipo, se muestra uno de los tres textos configurados aquí.")
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(.secondary)
+            } header: {
+                Text("Cómo funciona")
+            }
+        }
+    }
 }

@@ -1,11 +1,14 @@
 import SwiftUI
+import UserNotifications
 
 /// "El Mensaje del Más Allá" — Paranormal.
 ///
-/// Método real: un Atajo que recibe el nombre tecleado o dictado por el
-/// mago de forma disimulada, y lo convierte en una notificación
-/// personalizada que imita la apariencia de un mensaje de texto entrante
-/// de remitente desconocido.
+/// Método real (integrado en la app): un campo de texto oculto donde el
+/// mago teclea el nombre captado, que dispara de inmediato una
+/// notificación local real (`UNUserNotificationCenter`) personalizada
+/// para imitar la apariencia de un mensaje de texto entrante de
+/// remitente desconocido. Sin retardo: el ritual de quemar el papel ya
+/// aporta el tiempo dramático necesario.
 enum MessageFromBeyondEffect: EffectModule {
     static let info = EffectInfo(
         id: "message_from_beyond",
@@ -70,18 +73,87 @@ enum MessageFromBeyondEffect: EffectModule {
         ]
     )
 
-    private static let blueprint = ShortcutBlueprint(
-        shortcutName: "Mensaje del Más Allá",
-        trigger: "Se activa manualmente, introduciendo el nombre captado en el momento",
-        actions: [
-            "Añade 'Solicitar entrada de texto' (o 'Dictado') para introducir el nombre captado",
-            "Añade 'Mostrar notificación' personalizando el título como 'Mensaje de Texto' o el nombre de tu app de mensajería",
-            "Configura el cuerpo de la notificación como 'Estoy aquí, firmado: [nombre]', combinando el texto fijo con el nombre introducido"
-        ],
-        caveat: "El nombre debe introducirse en el momento, ya que no puedes saberlo de antemano: practica mucho la captación discreta del nombre antes de actuar."
-    )
-
-    static func performView() -> AnyView { AnyView(ShortcutEffectPerformView(info: info, accent: .indigo)) }
-    static func settingsView() -> AnyView { AnyView(ShortcutEffectSettingsView(title: info.name, blueprint: blueprint)) }
+    static func performView() -> AnyView { AnyView(MessageFromBeyondPerformView()) }
+    static func settingsView() -> AnyView { AnyView(MessageFromBeyondSettingsView()) }
     static func practiceView() -> AnyView { AnyView(PracticeView(info: info)) }
+}
+
+private struct MessageFromBeyondPerformView: View {
+    @Environment(\.dismiss) private var dismiss
+    @AppStorage("message_from_beyond_template") private var template = "Estoy aquí, firmado: %@"
+    @State private var capturedName = ""
+    @State private var sent = false
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        VStack(spacing: Theme.Spacing.lg) {
+            Spacer()
+            Image(systemName: "envelope.badge.fill")
+                .font(.system(size: 56))
+                .foregroundStyle(.indigo)
+
+            Text("Nombre captado")
+                .font(Theme.Typography.headline)
+            TextField("Teclea el nombre que has captado", text: $capturedName)
+                .focused($isFocused)
+                .multilineTextAlignment(.center)
+                .padding()
+                .glassCardStyle()
+                .padding(.horizontal, Theme.Spacing.lg)
+
+            PrimaryButton(sent ? "Enviado" : "Enviar mensaje", symbol: "paperplane.fill", tint: .indigo) {
+                send()
+            }
+            .padding(.horizontal, Theme.Spacing.lg)
+            .disabled(capturedName.trimmingCharacters(in: .whitespaces).isEmpty)
+
+            Spacer()
+            Button("Cerrar") { dismiss() }
+                .font(Theme.Typography.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(Theme.Spacing.lg)
+        .background(Color.appBackground)
+        .onAppear {
+            isFocused = true
+            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+        }
+    }
+
+    private func send() {
+        let content = UNMutableNotificationContent()
+        content.title = "Mensaje de Texto"
+        content.subtitle = "Remitente desconocido"
+        content.body = String(format: template, capturedName)
+        content.sound = .default
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 2, repeats: false)
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
+        UNUserNotificationCenter.current().add(request)
+
+        HapticManager.shared.impact(.soft)
+        sent = true
+    }
+}
+
+private struct MessageFromBeyondSettingsView: View {
+    @AppStorage("message_from_beyond_template") private var template = "Estoy aquí, firmado: %@"
+
+    var body: some View {
+        SecretConfigScreen(title: "El Mensaje del Más Allá") {
+            Section("Plantilla del mensaje") {
+                TextField("Estoy aquí, firmado: %@", text: $template)
+                Text("Usa %@ donde quieras que aparezca el nombre captado.")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+            Section {
+                Text("El campo de texto de la pantalla de actuación es donde tecleas el nombre captado. Al pulsar 'Enviar mensaje' se programa una notificación local real, disfrazada de mensaje de texto, que llega en un par de segundos.")
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(.secondary)
+            } header: {
+                Text("Cómo funciona")
+            }
+        }
+    }
 }

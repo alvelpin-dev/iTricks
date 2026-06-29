@@ -105,6 +105,17 @@ final class SensorManager: NSObject, ObservableObject {
         isClose = UIDevice.current.proximityState
     }
 
+    // MARK: Linterna
+
+    /// Controla la linterna real del dispositivo. Usada por efectos como
+    /// el Destello Espiritista para codificar respuestas en parpadeos.
+    func setTorch(on: Bool) {
+        guard let device = AVCaptureDevice.default(for: .video), device.hasTorch else { return }
+        try? device.lockForConfiguration()
+        device.torchMode = on ? .on : .off
+        device.unlockForConfiguration()
+    }
+
     func startMicMonitoring() {
         let session = AVAudioSession.sharedInstance()
         try? session.setCategory(.record)

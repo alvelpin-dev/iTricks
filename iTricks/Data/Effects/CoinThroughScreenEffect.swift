@@ -2,11 +2,12 @@ import SwiftUI
 
 /// "La Moneda que Atraviesa la Pantalla" — Herramientas.
 ///
-/// Método real: una imagen de una moneda sobre fondo negro a pantalla
-/// completa, combinada con Toque Posterior (triple toque) que cambia la
-/// imagen a una pantalla completamente negra en el instante del golpe
-/// seco contra la mano, sincronizando la desaparición visual con la
-/// caída real de una moneda física.
+/// Método real (integrado en la app): el Toque Posterior no es accesible
+/// a apps normales, así que el disparador es la detección real de golpe
+/// seco por acelerómetro (`SensorManager.shakeDetected`, igual que en
+/// Moneda imposible y Dado mental). En el instante del golpe contra la
+/// mano, la imagen de la moneda cambia a negro, sincronizada con la
+/// caída real de una moneda física retenida con técnica clásica.
 enum CoinThroughScreenEffect: EffectModule {
     static let info = EffectInfo(
         id: "coin_through_screen",
@@ -67,17 +68,68 @@ enum CoinThroughScreenEffect: EffectModule {
         ]
     )
 
-    private static let blueprint = ShortcutBlueprint(
-        shortcutName: "Moneda en Pantalla",
-        trigger: "Toque Posterior — Triple toque (Ajustes > Accesibilidad > Toque posterior)",
-        actions: [
-            "Añade 'Abrir foto' a pantalla completa con la imagen de la moneda sobre fondo negro",
-            "Crea la automatización de Toque Posterior (triple toque) que cambie la imagen a una pantalla completamente negra, o cierre la app de fotos"
-        ],
-        caveat: "El triple toque debe calibrarse con el golpe real contra tu mano: practica mucho la fuerza exacta antes de actuar en vivo."
-    )
-
-    static func performView() -> AnyView { AnyView(ShortcutEffectPerformView(info: info, accent: .yellow)) }
-    static func settingsView() -> AnyView { AnyView(ShortcutEffectSettingsView(title: info.name, blueprint: blueprint)) }
+    static func performView() -> AnyView { AnyView(CoinThroughScreenPerformView()) }
+    static func settingsView() -> AnyView { AnyView(CoinThroughScreenSettingsView()) }
     static func practiceView() -> AnyView { AnyView(PracticeView(info: info)) }
+}
+
+private struct CoinThroughScreenPerformView: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var sensors = SensorManager.shared
+    @State private var vanished = false
+
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+
+            VStack(spacing: Theme.Spacing.lg) {
+                Spacer()
+                if !vanished {
+                    ZStack {
+                        Circle().fill(Color.yellow).frame(width: 140, height: 140)
+                        Circle().stroke(Color.black.opacity(0.2), lineWidth: 3).frame(width: 140, height: 140)
+                    }
+                    .transition(.opacity)
+                }
+                Spacer()
+                Button("Cerrar") { dismiss() }
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(.white.opacity(0.6))
+                    .padding(.bottom, Theme.Spacing.md)
+            }
+        }
+        .overlay(alignment: .topTrailing) {
+            Color.clear
+                .frame(width: 60, height: 60)
+                .contentShape(Rectangle())
+                .onTapGesture { vanish() }
+                .accessibilityHidden(true)
+        }
+        .onAppear { sensors.startMotionUpdates() }
+        .onChange(of: sensors.shakeDetected) { detected in
+            if detected { vanish() }
+        }
+        .onDisappear { sensors.stopMotionUpdates() }
+    }
+
+    private func vanish() {
+        guard !vanished else { return }
+        HapticManager.shared.impact(.rigid)
+        MagicEngine.performReveal(sound: .whoosh)
+        withAnimation(Theme.AnimationCurve.snappy) { vanished = true }
+    }
+}
+
+private struct CoinThroughScreenSettingsView: View {
+    var body: some View {
+        SecretConfigScreen(title: "La Moneda que Atraviesa la Pantalla") {
+            Section {
+                Text("El golpe seco real del teléfono contra tu mano se detecta por acelerómetro y cambia la imagen a negro automáticamente. La esquina superior derecha es un botón de respaldo invisible por si el golpe no se detecta a la primera.")
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(.secondary)
+            } header: {
+                Text("Cómo funciona")
+            }
+        }
+    }
 }

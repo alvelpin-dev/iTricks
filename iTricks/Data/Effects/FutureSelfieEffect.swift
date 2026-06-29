@@ -2,87 +2,220 @@ import SwiftUI
 
 /// "La Foto del Futuro" — Tecnología.
 ///
-/// Método real: un Atajo que simula abrir la Cámara, toma una foto real,
-/// y le superpone una capa transparente pre-editada con el nombre del
-/// espectador sobre la zona de la mano del mago, guardándola como si
-/// fuera la fotografía original sin retoques.
+/// Método real (integrado en la app): se toma una foto real con la
+/// cámara (`CameraController.capturePhoto`) y, en el momento, se le
+/// superpone digitalmente el nombre del espectador sobre la zona de la
+/// mano mediante Core Graphics. El resultado se muestra solo dentro de
+/// iTricks (no se guarda en el carrete real), evitando pedir permiso de
+/// galería y dejando cero rastro fuera de la app.
 enum FutureSelfieEffect: EffectModule {
     static let info = EffectInfo(
         id: "future_selfie",
         name: "La Foto del Futuro",
         category: .technology,
-        shortDescription: "Te haces una selfie con el espectador. Al verla en la galería, sostienes un cartel con su nombre que nunca existió.",
+        shortDescription: "Te haces una selfie real con el espectador. Al verla, sostienes un cartel con su nombre que nunca existió.",
         difficulty: .expert,
         preparationTime: .minutes,
         symbol: "camera.badge.ellipsis",
         instructions: EffectInstructions(
-            whatItDoes: "Te haces una selfie con el espectador con tu app de cámara camuflada. Cuando entran a la galería a ver la foto, descubren que en ella el mago sostiene un cartel con el nombre del espectador, aunque nunca tocó ningún cartel real.",
+            whatItDoes: "Te haces una selfie real con el espectador desde la propia app. Al momento, la foto capturada muestra al mago sosteniendo un cartel con el nombre exacto del espectador, aunque nunca tocó ningún cartel real durante la toma.",
             preparation: [
-                "Averigua el nombre del espectador de forma casual al principio de la rutina, antes de llegar a este efecto.",
-                "Prepara con antelación una capa transparente con el nombre escrito a mano (o usa una variable de texto editable si tu flujo de edición lo permite) que se superponga sobre la zona de tu mano.",
-                "Practica sostener la mano en la posición exacta donde se superpondrá el cartel digital, para que el resultado final sea coherente visualmente."
+                "Averigua el nombre del espectador de forma casual al principio de la rutina.",
+                "Practica sostener la mano en la posición exacta donde se superpondrá el nombre (la zona se indica en pantalla con una guía discreta solo visible para ti durante la práctica)."
             ],
             performance: [
-                "Abre el atajo camuflado como app de Cámara y haz la selfie con el espectador con normalidad.",
-                "Deja que el atajo procese la foto en segundo plano, superponiendo la capa con el nombre.",
-                "Espera unos segundos antes de abrir la galería, dando tiempo a que el procesamiento termine.",
-                "Muestra la foto final: el espectador verá su nombre en un cartel que nunca existió en el momento de la foto."
+                "Abre el efecto e introduce el nombre del espectador, capturado de antemano, en el campo correspondiente.",
+                "Activa la cámara y haz la foto con el espectador con normalidad, sosteniendo la mano en la posición acordada.",
+                "La app superpone el nombre sobre la zona de tu mano en el mismo instante de la captura.",
+                "Muestra el resultado en pantalla: el espectador verá su nombre en un cartel que nunca existió durante la foto."
             ],
             script: [
                 "\"Vamos a hacernos una foto juntos, sonríe.\"",
-                "\"Espera, vamos a verla...\"",
+                "\"Mira esto...\"",
                 "\"¿Cómo puede ser que yo esté sosteniendo tu nombre si nunca tuve ningún cartel?\""
             ],
             recoveryTips: [
-                "Si el procesamiento tarda más de lo esperado, gana tiempo comentando la foto en general antes de abrir la galería.",
-                "Ten siempre verificada la ortografía exacta del nombre antes de la actuación, ya que un error sería muy visible en el cartel."
+                "Si la superposición no queda en la posición exacta de tu mano, puedes repetir la foto cuantas veces quieras antes de mostrarla.",
+                "Ten siempre verificada la ortografía exacta del nombre antes de la actuación."
             ],
             performanceTips: [
-                "Sostén la mano de forma natural durante la foto, en la posición exacta donde se superpondrá el cartel, para que el resultado parezca auténtico.",
-                "No mires la pantalla del teléfono justo después de la foto: deja que sea el espectador quien la abra y descubra el detalle."
+                "Sostén la mano de forma natural durante la foto, en la posición acordada, para que el resultado final parezca auténtico.",
+                "No mires la pantalla justo después de la foto: deja que sea el espectador quien la vea y descubra el detalle."
             ],
             variations: [
                 "En vez de un nombre, usa una palabra que el espectador haya elegido libremente durante la rutina.",
                 "Combínalo con el Post de Instagram fantasma para un cierre de rutina con doble impacto visual."
             ],
             commonMistakes: [
-                "No comprobar la iluminación y el ángulo de la mano antes de la foto, lo que puede hacer que la superposición se vea poco natural.",
+                "No comprobar la iluminación antes de la foto, lo que puede dificultar ver la superposición con claridad.",
                 "Mostrar la foto demasiado rápido, sin dar tiempo a que el espectador procese lo que está viendo."
             ],
             recommendedDuration: "2-3 minutos"
         ),
         practiceSteps: [
             PracticeStep(
-                performerAction: "Pregunta el nombre del espectador de forma casual al principio de la rutina.",
-                spectatorAction: "Comparte su nombre sin saber que se usará más adelante.",
-                simulationNote: "El nombre se necesita preparado antes de llegar a la fase de la foto."
+                performerAction: "Introduce el nombre del espectador capturado al inicio de la rutina.",
+                spectatorAction: "No sabe que su nombre se usará en esta fase.",
+                simulationNote: "El nombre se introduce en un campo de texto antes de abrir la cámara."
             ),
             PracticeStep(
-                performerAction: "Haz la selfie con el atajo camuflado como Cámara, sosteniendo la mano en la posición acordada.",
+                performerAction: "Haz la foto real con el espectador, sosteniendo la mano en la posición acordada.",
                 spectatorAction: "Posa con normalidad para la foto, sin sospechar nada especial.",
-                simulationNote: "El atajo toma la foto real y superpone la capa con el nombre en segundo plano."
+                simulationNote: "La app toma la foto real y superpone el nombre en el mismo instante."
             ),
             PracticeStep(
-                performerAction: "Abre la galería y muestra el resultado final.",
+                performerAction: "Muestra el resultado en pantalla.",
                 spectatorAction: "Descubre su nombre en un cartel que nunca existió durante la foto.",
-                simulationNote: "La superposición ya estaba aplicada antes de guardar la imagen en el carrete."
+                simulationNote: "La superposición se calcula con Core Graphics sobre la foto real capturada."
             )
         ]
     )
 
-    private static let blueprint = ShortcutBlueprint(
-        shortcutName: "Cámara (interfaz camuflada)",
-        trigger: "Se abre manualmente, como si fuera la app Cámara",
-        actions: [
-            "Cambia el icono y nombre del atajo para que parezca la app Cámara",
-            "Añade 'Tomar foto' como primera acción",
-            "Añade 'Superponer imagen' con la capa transparente pre-editada del nombre, posicionada sobre la zona de tu mano",
-            "Añade 'Guardar en Fotos' con el resultado combinado"
-        ],
-        caveat: "Necesitas preparar la capa con el nombre antes del show, lo que implica conocer el nombre del espectador con antelación (pregúntalo de forma casual al inicio de la rutina)."
-    )
-
-    static func performView() -> AnyView { AnyView(ShortcutEffectPerformView(info: info, accent: .teal)) }
-    static func settingsView() -> AnyView { AnyView(ShortcutEffectSettingsView(title: info.name, blueprint: blueprint)) }
+    static func performView() -> AnyView { AnyView(FutureSelfiePerformView()) }
+    static func settingsView() -> AnyView { AnyView(FutureSelfieSettingsView()) }
     static func practiceView() -> AnyView { AnyView(PracticeView(info: info)) }
+}
+
+private enum FutureSelfieStage {
+    case nameEntry, camera, result
+}
+
+private struct FutureSelfiePerformView: View {
+    @Environment(\.dismiss) private var dismiss
+    @StateObject private var camera = CameraController()
+    @AppStorage("future_selfie_name") private var spectatorName = ""
+    @AppStorage("future_selfie_overlay_x") private var overlayX = 0.5
+    @AppStorage("future_selfie_overlay_y") private var overlayY = 0.78
+    @State private var stage: FutureSelfieStage = .nameEntry
+    @State private var resultImage: UIImage?
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                switch stage {
+                case .nameEntry: nameEntryContent
+                case .camera: cameraContent
+                case .result: resultContent
+                }
+            }
+            .background(Color.appBackground)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Cerrar") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private var nameEntryContent: some View {
+        VStack(spacing: Theme.Spacing.md) {
+            Spacer()
+            Image(systemName: "person.text.rectangle")
+                .font(.system(size: 48))
+                .foregroundStyle(.teal)
+            Text("Nombre del espectador")
+                .font(Theme.Typography.title)
+            TextField("Nombre", text: $spectatorName)
+                .multilineTextAlignment(.center)
+                .padding()
+                .glassCardStyle()
+                .padding(.horizontal, Theme.Spacing.lg)
+            PrimaryButton("Abrir cámara", symbol: "camera.fill", tint: .teal) {
+                camera.start(capturesPhotos: true)
+                withAnimation { stage = .camera }
+            }
+            .padding(.horizontal, Theme.Spacing.lg)
+            .disabled(spectatorName.trimmingCharacters(in: .whitespaces).isEmpty)
+            Spacer()
+        }
+    }
+
+    private var cameraContent: some View {
+        ZStack(alignment: .bottom) {
+            CameraPreviewView(controller: camera).ignoresSafeArea()
+            PrimaryButton("Capturar", symbol: "camera.fill", tint: .teal) {
+                capture()
+            }
+            .padding(.horizontal, Theme.Spacing.lg)
+            .padding(.bottom, Theme.Spacing.lg)
+        }
+        .onDisappear { camera.stop() }
+    }
+
+    private var resultContent: some View {
+        VStack(spacing: Theme.Spacing.md) {
+            if let resultImage {
+                Image(uiImage: resultImage)
+                    .resizable()
+                    .scaledToFit()
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.medium))
+                    .padding(Theme.Spacing.md)
+            }
+            SecondaryButton("Repetir foto", symbol: "arrow.counterclockwise") {
+                withAnimation { stage = .camera }
+            }
+            .padding(.horizontal, Theme.Spacing.lg)
+            .padding(.bottom, Theme.Spacing.md)
+        }
+    }
+
+    private func capture() {
+        camera.capturePhoto { image in
+            guard let image else { return }
+            HapticManager.shared.impact(.medium)
+            resultImage = Self.overlay(name: spectatorName, on: image, relativeX: overlayX, relativeY: overlayY)
+            camera.stop()
+            withAnimation(Theme.AnimationCurve.standard) { stage = .result }
+            MagicEngine.performReveal()
+        }
+    }
+
+    private static func overlay(name: String, on image: UIImage, relativeX: Double, relativeY: Double) -> UIImage {
+        let renderer = UIGraphicsImageRenderer(size: image.size)
+        return renderer.image { _ in
+            image.draw(at: .zero)
+
+            let fontSize = image.size.width * 0.06
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: fontSize, weight: .bold),
+                .foregroundColor: UIColor.black,
+                .backgroundColor: UIColor.white
+            ]
+            let text = NSAttributedString(string: " \(name) ", attributes: attributes)
+            let textSize = text.size()
+            let origin = CGPoint(
+                x: image.size.width * relativeX - textSize.width / 2,
+                y: image.size.height * relativeY - textSize.height / 2
+            )
+            text.draw(at: origin)
+        }
+    }
+}
+
+private struct FutureSelfieSettingsView: View {
+    @AppStorage("future_selfie_overlay_x") private var overlayX = 0.5
+    @AppStorage("future_selfie_overlay_y") private var overlayY = 0.78
+
+    var body: some View {
+        SecretConfigScreen(title: "La Foto del Futuro") {
+            Section("Posición del cartel sobre la foto") {
+                VStack(alignment: .leading) {
+                    Text("Horizontal")
+                    Slider(value: $overlayX, in: 0...1)
+                }
+                VStack(alignment: .leading) {
+                    Text("Vertical")
+                    Slider(value: $overlayY, in: 0...1)
+                }
+            }
+            Section {
+                Text("Ajusta estos valores para que el nombre quede situado exactamente sobre la zona donde sueles colocar la mano al hacer la foto.")
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(.secondary)
+            } header: {
+                Text("Cómo funciona")
+            }
+        }
+    }
 }

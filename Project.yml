@@ -31,6 +31,8 @@ targets:
         NSMicrophoneUsageDescription: "iTricks necesita el micrófono para los efectos que reaccionan a la voz o al sonido del entorno."
         NSFaceIDUsageDescription: "iTricks puede usar Face ID para desbloquear configuraciones secretas de mago de forma discreta."
         NSLocationWhenInUseUsageDescription: "iTricks usa la brújula del dispositivo para los efectos que detectan variaciones magnéticas del entorno."
+        NSAppleMusicUsageDescription: "iTricks puede buscar y reproducir canciones de tu biblioteca para el efecto de telepatía musical."
+        NSPhotoLibraryUsageDescription: "iTricks necesita acceso a tus fotos para que elijas la imagen que se usará en algunos efectos."
         ITSAppUsesNonExceptionEncryption: false
     settings:
       base:

@@ -2,11 +2,11 @@ import SwiftUI
 
 /// "El Destello Espiritista" — Paranormal.
 ///
-/// Método real: una automatización ligada a una pulsación sutil del botón
-/// de volumen (activada por el mago, por un disparador bluetooth con el
-/// pie, o por un cómplice), que enciende y apaga la linterna del iPhone
-/// el número exacto de veces que el mago decide, codificando así
-/// respuestas de sí/no.
+/// Método real (integrado en la app): los botones de volumen no son
+/// interceptables por una app normal, así que el disparador real son
+/// tres zonas táctiles ocultas (sí / no / no estoy seguro), cada una
+/// controlando la linterna real del dispositivo (`SensorManager.setTorch`)
+/// con un número de parpadeos configurable.
 enum SpiritistFlashEffect: EffectModule {
     static let info = EffectInfo(
         id: "spiritist_flash",
@@ -19,15 +19,14 @@ enum SpiritistFlashEffect: EffectModule {
         instructions: EffectInstructions(
             whatItDoes: "Colocas el iPhone en el centro de la mesa con la linterna lista. Haces preguntas al \"más allá\". Si la respuesta es sí, la linterna parpadea una vez; si es no, parpadea dos veces. El teléfono responde correctamente a preguntas que el mago no podía saber.",
             preparation: [
-                "Configura la automatización por botón de volumen descrita en los ajustes secretos.",
-                "Si usas un disparador bluetooth oculto (activado con el pie) o un cómplice, practica la señal hasta que sea completamente disimulada.",
+                "Practica las tres zonas táctiles ocultas (izquierda = sí, centro = no, derecha = no estoy seguro) hasta poder activarlas sin mirar.",
                 "Prepara de antemano las respuestas a las preguntas que vas a hacer, usando técnicas de mentalismo (información previa, lectura en frío, o un cómplice que te las transmita)."
             ],
             performance: [
-                "Coloca el teléfono en el centro de la mesa, con la pantalla apagada o mostrando solo el icono de linterna.",
+                "Coloca el teléfono en el centro de la mesa, con la pantalla hacia abajo o la app abierta discretamente.",
                 "Haz preguntas de sí/no al \"más allá\" sobre algo que ya sepas la respuesta por algún método de mentalismo.",
-                "Activa discretamente uno o dos parpadeos según la respuesta que quieras dar.",
-                "Deja que el público interprete los parpadeos como una comunicación genuina con el más allá."
+                "Toca discretamente la zona correspondiente a la respuesta que quieras dar.",
+                "Deja que el público interprete los parpadeos reales de la linterna como una comunicación genuina con el más allá."
             ],
             script: [
                 "\"Si hay alguien aquí con nosotros, que responda a través de la luz.\"",
@@ -66,18 +65,94 @@ enum SpiritistFlashEffect: EffectModule {
         ]
     )
 
-    private static let blueprint = ShortcutBlueprint(
-        shortcutName: "Destello Espiritista (Sí / No)",
-        trigger: "Automatización personal por botón de volumen, disparador bluetooth con el pie, o señal de un cómplice",
-        actions: [
-            "Crea una automatización para 'Sí': 'Configurar linterna' Encendido → 'Esperar' 0.3s → 'Configurar linterna' Apagado",
-            "Crea una automatización distinta para 'No': repite el parpadeo completo dos veces en lugar de una",
-            "Asigna cada automatización a un disparador discreto distinto (por ejemplo, subir volumen = sí, bajar volumen = no)"
-        ],
-        caveat: "El verdadero secreto de este efecto es cómo obtienes la información para responder correctamente, no el mecanismo de la linterna: trabaja esa parte con técnicas de mentalismo."
-    )
-
-    static func performView() -> AnyView { AnyView(ShortcutEffectPerformView(info: info, accent: .yellow)) }
-    static func settingsView() -> AnyView { AnyView(ShortcutEffectSettingsView(title: info.name, blueprint: blueprint)) }
+    static func performView() -> AnyView { AnyView(SpiritistFlashPerformView()) }
+    static func settingsView() -> AnyView { AnyView(SpiritistFlashSettingsView()) }
     static func practiceView() -> AnyView { AnyView(PracticeView(info: info)) }
+}
+
+private struct SpiritistFlashPerformView: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var sensors = SensorManager.shared
+    @AppStorage("spiritist_flash_yes") private var flashesForYes = 1
+    @AppStorage("spiritist_flash_no") private var flashesForNo = 2
+    @AppStorage("spiritist_flash_unsure") private var flashesForUnsure = 3
+    @State private var isFlashing = false
+
+    var body: some View {
+        ZStack {
+            Color.appBackground.ignoresSafeArea()
+
+            VStack(spacing: Theme.Spacing.lg) {
+                Spacer()
+                Image(systemName: isFlashing ? "flashlight.on.fill" : "flashlight.off.fill")
+                    .font(.system(size: 56))
+                    .foregroundStyle(isFlashing ? .yellow : .secondary)
+                Text("Toca una zona oculta: izquierda (sí), centro (no), derecha (no estoy seguro)")
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, Theme.Spacing.lg)
+                Spacer()
+                Button("Cerrar") { dismiss() }
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(Theme.Spacing.lg)
+
+            HStack(spacing: 0) {
+                hiddenZone(count: flashesForYes)
+                hiddenZone(count: flashesForNo)
+                hiddenZone(count: flashesForUnsure)
+            }
+        }
+        .onDisappear { sensors.setTorch(on: false) }
+    }
+
+    private func hiddenZone(count: Int) -> some View {
+        Color.clear
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
+            .onTapGesture { flash(times: count) }
+            .accessibilityHidden(true)
+    }
+
+    private func flash(times: Int) {
+        guard !isFlashing else { return }
+        isFlashing = true
+        Task {
+            for i in 0..<times {
+                sensors.setTorch(on: true)
+                HapticManager.shared.impact(.soft)
+                try? await Task.sleep(nanoseconds: 250_000_000)
+                sensors.setTorch(on: false)
+                if i < times - 1 {
+                    try? await Task.sleep(nanoseconds: 250_000_000)
+                }
+            }
+            isFlashing = false
+        }
+    }
+}
+
+private struct SpiritistFlashSettingsView: View {
+    @AppStorage("spiritist_flash_yes") private var flashesForYes = 1
+    @AppStorage("spiritist_flash_no") private var flashesForNo = 2
+    @AppStorage("spiritist_flash_unsure") private var flashesForUnsure = 3
+
+    var body: some View {
+        SecretConfigScreen(title: "El Destello Espiritista") {
+            Section("Número de parpadeos") {
+                Stepper("Sí: \(flashesForYes)", value: $flashesForYes, in: 1...5)
+                Stepper("No: \(flashesForNo)", value: $flashesForNo, in: 1...5)
+                Stepper("No estoy seguro: \(flashesForUnsure)", value: $flashesForUnsure, in: 1...5)
+            }
+            Section {
+                Text("La pantalla de actuación se divide en tres zonas invisibles iguales (izquierda, centro, derecha) que controlan la linterna real del dispositivo con el número de parpadeos configurado aquí para cada respuesta.")
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(.secondary)
+            } header: {
+                Text("Cómo funciona")
+            }
+        }
+    }
 }

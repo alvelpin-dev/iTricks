@@ -1,12 +1,14 @@
 import SwiftUI
+import PhotosUI
 
 /// "El Post de Instagram Fantasma" — Tecnología.
 ///
-/// Método real: una captura de pantalla pre-editada de tu perfil de
-/// Instagram, con el área de un papel dejada en blanco a propósito. Un
-/// Atajo solicita la palabra elegida por el espectador y la superpone
-/// sobre esa zona en blanco, mostrando el resultado a pantalla completa
-/// como si fuera la app real.
+/// Método real (integrado en la app): el mago elige, una sola vez al
+/// preparar el efecto, su propia captura editada del perfil (con el área
+/// del papel en blanco) usando el selector de fotos nativo de iOS
+/// (`PhotosPicker`). Durante la actuación, la app superpone en vivo la
+/// palabra elegida sobre esa zona en blanco con Core Graphics, mostrando
+/// el resultado a pantalla completa.
 enum GhostInstagramPostEffect: EffectModule {
     static let info = EffectInfo(
         id: "ghost_instagram_post",
@@ -66,18 +68,153 @@ enum GhostInstagramPostEffect: EffectModule {
         ]
     )
 
-    private static let blueprint = ShortcutBlueprint(
-        shortcutName: "Instagram (interfaz camuflada)",
-        trigger: "Se abre manualmente, como si fuera la app Instagram",
-        actions: [
-            "Añade 'Solicitar entrada de texto' para la palabra elegida por el espectador",
-            "Añade 'Superponer texto' sobre la imagen pre-editada de tu perfil, posicionando la palabra en el área en blanco del papel",
-            "Añade 'Vista rápida' mostrando la imagen combinada a pantalla completa"
-        ],
-        caveat: "La imagen base debe prepararse con mucho cuidado de antemano: la calidad de la edición es lo que determina si el efecto resulta creíble."
-    )
-
-    static func performView() -> AnyView { AnyView(ShortcutEffectPerformView(info: info, accent: .pink)) }
-    static func settingsView() -> AnyView { AnyView(ShortcutEffectSettingsView(title: info.name, blueprint: blueprint)) }
+    static func performView() -> AnyView { AnyView(GhostInstagramPostPerformView()) }
+    static func settingsView() -> AnyView { AnyView(GhostInstagramPostSettingsView()) }
     static func practiceView() -> AnyView { AnyView(PracticeView(info: info)) }
+}
+
+private struct GhostInstagramPostPerformView: View {
+    @Environment(\.dismiss) private var dismiss
+    @AppStorage("ghost_instagram_overlay_x") private var overlayX = 0.5
+    @AppStorage("ghost_instagram_overlay_y") private var overlayY = 0.55
+    @State private var baseImageData: Data?
+    @State private var word = ""
+    @State private var resultImage: UIImage?
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: Theme.Spacing.md) {
+                if let resultImage {
+                    Image(uiImage: resultImage)
+                        .resizable()
+                        .scaledToFit()
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.medium))
+                        .padding(Theme.Spacing.md)
+                    SecondaryButton("Repetir con otra palabra", symbol: "arrow.counterclockwise") {
+                        resultImage = nil
+                        word = ""
+                    }
+                    .padding(.horizontal, Theme.Spacing.lg)
+                } else if let baseImageData, let baseImage = UIImage(data: baseImageData) {
+                    Image(uiImage: baseImage)
+                        .resizable()
+                        .scaledToFit()
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.medium))
+                        .padding(Theme.Spacing.md)
+                        .opacity(0.4)
+
+                    TextField("Palabra elegida por el espectador", text: $word)
+                        .multilineTextAlignment(.center)
+                        .padding().glassCardStyle()
+                        .padding(.horizontal, Theme.Spacing.lg)
+
+                    PrimaryButton("Mostrar publicación", symbol: "photo.fill", tint: .pink) {
+                        reveal(baseImage: baseImage)
+                    }
+                    .padding(.horizontal, Theme.Spacing.lg)
+                    .disabled(word.trimmingCharacters(in: .whitespaces).isEmpty)
+                } else {
+                    Spacer()
+                    Image(systemName: "photo.badge.plus")
+                        .font(.system(size: 48))
+                        .foregroundStyle(.pink)
+                    Text("No has elegido tu captura de Instagram todavía")
+                        .font(Theme.Typography.body)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, Theme.Spacing.lg)
+                    Text("Configúrala en los ajustes secretos de este efecto")
+                        .font(Theme.Typography.caption)
+                        .foregroundStyle(.tertiary)
+                    Spacer()
+                }
+            }
+            .background(Color.appBackground)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Cerrar") { dismiss() }
+                }
+            }
+            .onAppear {
+                baseImageData = UserDefaults.standard.data(forKey: "ghost_instagram_base_image")
+            }
+        }
+    }
+
+    private func reveal(baseImage: UIImage) {
+        resultImage = Self.overlay(word: word, on: baseImage, relativeX: overlayX, relativeY: overlayY)
+        HapticManager.shared.impact(.medium)
+        MagicEngine.performReveal()
+    }
+
+    private static func overlay(word: String, on image: UIImage, relativeX: Double, relativeY: Double) -> UIImage {
+        let renderer = UIGraphicsImageRenderer(size: image.size)
+        return renderer.image { _ in
+            image.draw(at: .zero)
+            let fontSize = image.size.width * 0.07
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont(name: "Marker Felt", size: fontSize) ?? UIFont.systemFont(ofSize: fontSize, weight: .bold),
+                .foregroundColor: UIColor.black
+            ]
+            let text = NSAttributedString(string: word.uppercased(), attributes: attributes)
+            let size = text.size()
+            let origin = CGPoint(
+                x: image.size.width * relativeX - size.width / 2,
+                y: image.size.height * relativeY - size.height / 2
+            )
+            text.draw(at: origin)
+        }
+    }
+}
+
+private struct GhostInstagramPostSettingsView: View {
+    @AppStorage("ghost_instagram_overlay_x") private var overlayX = 0.5
+    @AppStorage("ghost_instagram_overlay_y") private var overlayY = 0.55
+    @State private var selectedItem: PhotosPickerItem?
+    @State private var previewData: Data?
+
+    var body: some View {
+        SecretConfigScreen(title: "El Post de Instagram Fantasma") {
+            Section("Captura base de tu perfil") {
+                if let previewData, let image = UIImage(data: previewData) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxHeight: 200)
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.medium))
+                }
+                PhotosPicker("Elegir captura de pantalla", selection: $selectedItem, matching: .images)
+            }
+            Section("Posición de la palabra sobre el papel") {
+                VStack(alignment: .leading) {
+                    Text("Horizontal")
+                    Slider(value: $overlayX, in: 0...1)
+                }
+                VStack(alignment: .leading) {
+                    Text("Vertical")
+                    Slider(value: $overlayY, in: 0...1)
+                }
+            }
+            Section {
+                Text("Elige una captura de pantalla de tu propio perfil de Instagram, editada de antemano con el área del papel en blanco. La app superpondrá la palabra del espectador sobre esa zona en cada actuación.")
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(.secondary)
+            } header: {
+                Text("Cómo funciona")
+            }
+        }
+        .onAppear {
+            previewData = UserDefaults.standard.data(forKey: "ghost_instagram_base_image")
+        }
+        .onChange(of: selectedItem) { item in
+            guard let item else { return }
+            Task {
+                if let data = try? await item.loadTransferable(type: Data.self) {
+                    UserDefaults.standard.set(data, forKey: "ghost_instagram_base_image")
+                    previewData = data
+                }
+            }
+        }
+    }
 }

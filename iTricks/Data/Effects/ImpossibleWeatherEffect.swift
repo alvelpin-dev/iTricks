@@ -2,10 +2,11 @@ import SwiftUI
 
 /// "El Clima Imposible" — Tecnología.
 ///
-/// Método real: un Atajo en dos fases. Al principio del show, captura el
-/// nombre del espectador discretamente. Más tarde, abre una página web
-/// simple (HTML básico) que imita visualmente la app Clima, combinando
-/// la ciudad nombrada con el nombre guardado previamente.
+/// Método real (integrado en la app): una sola pantalla con dos etapas.
+/// Primero el mago teclea discretamente el nombre captado al inicio de
+/// la rutina; más tarde, en la misma pantalla, introduce la ciudad que
+/// nombre el espectador. Una interfaz que imita visualmente la app
+/// Clima combina ambos datos en una condición climática extrema forzada.
 enum ImpossibleWeatherEffect: EffectModule {
     static let info = EffectInfo(
         id: "impossible_weather",
@@ -64,18 +65,115 @@ enum ImpossibleWeatherEffect: EffectModule {
         ]
     )
 
-    private static let blueprint = ShortcutBlueprint(
-        shortcutName: "App del Clima (interfaz simulada)",
-        trigger: "Se ejecuta en dos fases: primero pide el nombre, después muestra el resultado",
-        actions: [
-            "Fase 1 (al inicio del show): añade 'Solicitar entrada de texto' para el nombre del espectador y guárdalo en una variable",
-            "Fase 2 (más adelante): añade 'Solicitar entrada de texto' para la ciudad nombrada",
-            "Añade 'Mostrar página web' con un HTML simple que imite la interfaz del Clima, combinando ciudad + nombre guardado mediante texto"
-        ],
-        caveat: "Necesitas mantener la app Atajos abierta o reanudar el mismo atajo entre la fase 1 y la fase 2 para conservar el nombre guardado."
-    )
-
-    static func performView() -> AnyView { AnyView(ShortcutEffectPerformView(info: info, accent: .cyan)) }
-    static func settingsView() -> AnyView { AnyView(ShortcutEffectSettingsView(title: info.name, blueprint: blueprint)) }
+    static func performView() -> AnyView { AnyView(ImpossibleWeatherPerformView()) }
+    static func settingsView() -> AnyView { AnyView(ImpossibleWeatherSettingsView()) }
     static func practiceView() -> AnyView { AnyView(PracticeView(info: info)) }
+}
+
+private enum WeatherStage {
+    case nameEntry, cityEntry, result
+}
+
+private struct ImpossibleWeatherPerformView: View {
+    @Environment(\.dismiss) private var dismiss
+    @AppStorage("impossible_weather_condition") private var condition = "Tormenta de nieve"
+    @AppStorage("impossible_weather_icon") private var iconName = "cloud.snow.fill"
+    @State private var stage: WeatherStage = .nameEntry
+    @State private var name = ""
+    @State private var city = ""
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                switch stage {
+                case .nameEntry: nameEntryContent
+                case .cityEntry: cityEntryContent
+                case .result: resultContent
+                }
+            }
+            .background(Color.appBackground)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Cerrar") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private var nameEntryContent: some View {
+        VStack(spacing: Theme.Spacing.md) {
+            Spacer()
+            Text("Nombre captado al inicio del show")
+                .font(Theme.Typography.headline)
+            TextField("Nombre", text: $name)
+                .multilineTextAlignment(.center)
+                .padding().glassCardStyle()
+                .padding(.horizontal, Theme.Spacing.lg)
+            PrimaryButton("Guardar y continuar", symbol: "checkmark", tint: .cyan) {
+                withAnimation { stage = .cityEntry }
+            }
+            .padding(.horizontal, Theme.Spacing.lg)
+            .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+            Spacer()
+        }
+    }
+
+    private var cityEntryContent: some View {
+        VStack(spacing: Theme.Spacing.md) {
+            Spacer()
+            Text("Ciudad nombrada por el espectador")
+                .font(Theme.Typography.headline)
+            TextField("Ciudad", text: $city)
+                .multilineTextAlignment(.center)
+                .padding().glassCardStyle()
+                .padding(.horizontal, Theme.Spacing.lg)
+            PrimaryButton("Mostrar el clima", symbol: "cloud.fill", tint: .cyan) {
+                withAnimation(Theme.AnimationCurve.standard) { stage = .result }
+                MagicEngine.performReveal()
+            }
+            .padding(.horizontal, Theme.Spacing.lg)
+            .disabled(city.trimmingCharacters(in: .whitespaces).isEmpty)
+            Spacer()
+        }
+    }
+
+    private var resultContent: some View {
+        VStack(spacing: Theme.Spacing.sm) {
+            Spacer()
+            Text(city)
+                .font(.system(size: 34, weight: .semibold, design: .rounded))
+            Image(systemName: iconName)
+                .font(.system(size: 64))
+                .foregroundStyle(.cyan)
+            Text(condition)
+                .font(Theme.Typography.headline)
+            Text("Ideal para que \(name) viaje hoy")
+                .font(Theme.Typography.body)
+                .foregroundStyle(.secondary)
+                .padding(.top, Theme.Spacing.sm)
+            Spacer()
+        }
+    }
+}
+
+private struct ImpossibleWeatherSettingsView: View {
+    @AppStorage("impossible_weather_condition") private var condition = "Tormenta de nieve"
+    @AppStorage("impossible_weather_icon") private var iconName = "cloud.snow.fill"
+
+    var body: some View {
+        SecretConfigScreen(title: "El Clima Imposible") {
+            Section("Condición forzada") {
+                TextField("Ej. Tormenta de nieve", text: $condition)
+                TextField("Nombre de SF Symbol", text: $iconName)
+            }
+            Section {
+                Text("La pantalla de actuación pide primero el nombre captado y después la ciudad nombrada por el espectador, combinándolos en una interfaz que imita la app Clima con la condición configurada aquí.")
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(.secondary)
+            } header: {
+                Text("Cómo funciona")
+            }
+        }
+    }
 }
