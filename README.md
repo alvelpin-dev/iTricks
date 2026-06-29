@@ -6,7 +6,7 @@ App nativa de iOS (SwiftUI, MVVM) para magos y mentalistas profesionales. Diseñ
 
 - macOS con Xcode 16+
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`)
-- iOS 15.0+ como destino mínimo (compatible desde iPhone 11)
+- iOS 16.0+ como destino mínimo (compatible desde iPhone 11, que soporta hasta iOS 18)
 
 ## Generar y abrir el proyecto
 

@@ -2,7 +2,7 @@ name: iTricks
 options:
   bundleIdPrefix: com.itricks.app
   deploymentTarget:
-    iOS: "15.0"
+    iOS: "16.0"
   createIntermediateGroups: true
 configs:
   Debug: debug
@@ -18,7 +18,7 @@ targets:
   iTricks:
     type: application
     platform: iOS
-    deploymentTarget: "15.0"
+    deploymentTarget: "16.0"
     sources:
       - path: iTricks
     info:
