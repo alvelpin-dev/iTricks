@@ -14,17 +14,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select Xcode
-        run: sudo xcode-select -switch /Applications/Xcode_16.app/Contents/Developer
+      - name: Show Xcode version
+        run: xcodebuild -version
 
       - name: Install XcodeGen
-        run: brew install xcodegen
+        run: |
+          export HOMEBREW_NO_AUTO_UPDATE=1
+          brew install xcodegen
 
       - name: Generate Xcode project
         run: xcodegen generate
 
-      - name: Show available simulators
-        run: xcrun simctl list devicetypes
+      - name: Show available schemes
+        run: xcodebuild -list -project iTricks.xcodeproj
 
       - name: Build for iOS Simulator
         run: |
@@ -34,16 +36,11 @@ jobs:
             -scheme iTricks \
             -destination "generic/platform=iOS Simulator" \
             -configuration Debug \
-            CODE_SIGNING_ALLOWED=NO \
-            | xcpretty || xcodebuild build \
-            -project iTricks.xcodeproj \
-            -scheme iTricks \
-            -destination "generic/platform=iOS Simulator" \
-            -configuration Debug \
             CODE_SIGNING_ALLOWED=NO
 
       - name: Build unsigned .app for device (for later manual signing)
         run: |
+          set -o pipefail
           xcodebuild build \
             -project iTricks.xcodeproj \
             -scheme iTricks \
