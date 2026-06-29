@@ -91,7 +91,7 @@ private struct GhostInstagramPostPerformView: View {
                         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.medium))
                         .padding(Theme.Spacing.md)
                     SecondaryButton("Repetir con otra palabra", symbol: "arrow.counterclockwise") {
-                        resultImage = nil
+                        self.resultImage = nil
                         word = ""
                     }
                     .padding(.horizontal, Theme.Spacing.lg)
