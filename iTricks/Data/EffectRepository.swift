@@ -17,7 +17,18 @@ final class EffectRepository {
             EffectDescriptor(ThoughtDetectorEffect.self),
             EffectDescriptor(AnyCardEffect.self),
             EffectDescriptor(ParanormalDetectorEffect.self),
-            EffectDescriptor(MagicCalculatorEffect.self)
+            EffectDescriptor(MagicCalculatorEffect.self),
+            EffectDescriptor(PredictionSealedEffect.self),
+            EffectDescriptor(LieDetectorEffect.self),
+            EffectDescriptor(ImpossibleCoinEffect.self),
+            EffectDescriptor(PhoneSpiritEffect.self),
+            EffectDescriptor(MentalDiceEffect.self),
+            EffectDescriptor(ObjectDetectorEffect.self),
+            EffectDescriptor(MindReadingCameraEffect.self),
+            EffectDescriptor(DestinyWheelEffect.self),
+            EffectDescriptor(HauntedPhoneEffect.self),
+            EffectDescriptor(AIWordGuesserEffect.self),
+            EffectDescriptor(SiriPredictionEffect.self)
         ]
     }
 

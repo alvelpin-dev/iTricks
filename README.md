@@ -71,9 +71,20 @@ Cada efecto puede revelar sus ajustes ocultos mediante gestos discretos gestiona
 
 ## Efectos incluidos en esta versión
 
-- Detector de pensamiento (Mentalismo)
-- Adivina cualquier carta (Cartas)
-- Detector paranormal (Paranormal)
-- Calculadora mágica (Números)
+- Detector de pensamiento (Mentalismo) — fuerza matemática (raíz digital de 9)
+- Predicción sellada (Mentalismo) — equívoco de 4 opciones
+- Adivina cualquier carta (Cartas) — seguimiento de cortes completos
+- Detector paranormal (Paranormal) — magnetómetro real + control oculto
+- Detector de mentiras (Paranormal) — nivel de micrófono real + control oculto
+- Espíritu en el móvil (Paranormal) — vibración patrón que desplaza el teléfono
+- Móvil embrujado (Paranormal) — sensor de proximidad real
+- Calculadora mágica (Números) — propiedad matemática del 1089
+- Dado mental (Números) — zarandeo real (acelerómetro) + resultado forzado
+- Ruleta del destino (Números) — giro real, ángulo final forzado
+- Detector de objetos (Tecnología) — cámara real + control oculto
+- Cámara que lee pensamientos (Tecnología) — cámara real + fuerza matemática
+- IA que adivina palabras (Tecnología) — equívoco de 4 opciones
+- Predicción con Siri (Tecnología) — guía de Atajos de Siri reales
+- Moneda imposible (Herramientas) — detección de gesto (acelerómetro) sincronizada con un vanish real
 
-El resto de efectos del briefing original (Predicción sellada, Detector de mentiras, Moneda imposible, Espíritu en el móvil, Dado mental, Detector de objetos, Cámara que lee pensamientos, Ruleta del destino, Móvil embrujado, IA que adivina palabras, Predicción con Siri) siguen la misma arquitectura `EffectModule` y se añaden de forma incremental siguiendo la guía anterior.
+Los 15 efectos del briefing original están implementados siguiendo la misma arquitectura `EffectModule`.

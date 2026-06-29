@@ -1,5 +1,6 @@
 import CoreMotion
 import CoreLocation
+import AVFoundation
 import UIKit
 import Combine
 
@@ -26,6 +27,21 @@ final class SensorManager: NSObject, ObservableObject {
 
     @Published private(set) var isClose = false
 
+    // MARK: Detección de zarandeo (acelerómetro)
+
+    /// Se dispara a `true` durante una fracción de segundo cuando se detecta
+    /// un movimiento brusco (zarandeo o golpe seco), útil para disparar
+    /// "tiradas" de dado o vanishes de moneda sincronizados con un gesto real.
+    @Published private(set) var shakeDetected = false
+    private var lastShakeTime = Date.distantPast
+
+    // MARK: Nivel de micrófono
+
+    private var audioRecorder: AVAudioRecorder?
+    private var micTimer: Timer?
+    /// Nivel de audio normalizado entre 0 y 1, actualizado varias veces por segundo.
+    @Published private(set) var micLevel: Double = 0
+
     private override init() {
         super.init()
         locationManager.delegate = self
@@ -39,6 +55,20 @@ final class SensorManager: NSObject, ObservableObject {
             self.roll = motion.attitude.roll
             self.pitch = motion.attitude.pitch
             self.rotationRate = motion.rotationRate.z
+
+            let acceleration = motion.userAcceleration
+            let magnitude = sqrt(
+                acceleration.x * acceleration.x +
+                acceleration.y * acceleration.y +
+                acceleration.z * acceleration.z
+            )
+            if magnitude > 1.6, Date().timeIntervalSince(self.lastShakeTime) > 0.6 {
+                self.lastShakeTime = Date()
+                self.shakeDetected = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    self.shakeDetected = false
+                }
+            }
         }
     }
 
@@ -75,12 +105,47 @@ final class SensorManager: NSObject, ObservableObject {
         isClose = UIDevice.current.proximityState
     }
 
+    func startMicMonitoring() {
+        let session = AVAudioSession.sharedInstance()
+        try? session.setCategory(.record)
+        try? session.setActive(true)
+
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("itricks_mic_level.caf")
+        let settings: [String: Any] = [
+            AVFormatIDKey: kAudioFormatAppleLossless,
+            AVSampleRateKey: 44100,
+            AVNumberOfChannelsKey: 1,
+            AVEncoderAudioQualityKey: AVAudioQuality.min.rawValue
+        ]
+        guard let recorder = try? AVAudioRecorder(url: url, settings: settings) else { return }
+        recorder.isMeteringEnabled = true
+        recorder.record()
+        audioRecorder = recorder
+
+        micTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 12.0, repeats: true) { [weak self] _ in
+            guard let self, let recorder = self.audioRecorder else { return }
+            recorder.updateMeters()
+            let decibels = recorder.averagePower(forChannel: 0)
+            let normalized = pow(10, decibels / 20)
+            self.micLevel = min(1, max(0, Double(normalized) * 4))
+        }
+    }
+
+    func stopMicMonitoring() {
+        micTimer?.invalidate()
+        micTimer = nil
+        audioRecorder?.stop()
+        audioRecorder = nil
+        micLevel = 0
+    }
+
     /// Detiene todos los sensores activos. Debe llamarse al salir de la
     /// vista del efecto para no dejar sensores corriendo en segundo plano.
     func stopAll() {
         stopMotionUpdates()
         stopHeadingUpdates()
         stopProximityMonitoring()
+        stopMicMonitoring()
     }
 }
 
