@@ -139,9 +139,6 @@ private struct ImpossibleCoinPerformView: View {
         guard !vanished else { return }
         MagicEngine.performReveal(sound: .whoosh)
         withAnimation { vanished = true }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            withAnimation { vanished = false }
-        }
     }
 }
 

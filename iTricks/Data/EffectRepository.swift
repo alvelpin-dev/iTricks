@@ -28,7 +28,27 @@ final class EffectRepository {
             EffectDescriptor(DestinyWheelEffect.self),
             EffectDescriptor(HauntedPhoneEffect.self),
             EffectDescriptor(AIWordGuesserEffect.self),
-            EffectDescriptor(SiriPredictionEffect.self)
+            EffectDescriptor(SiriPredictionEffect.self),
+            EffectDescriptor(NumericMindReaderEffect.self),
+            EffectDescriptor(LockScreenPredictionEffect.self),
+            EffectDescriptor(SiriThePsychicEffect.self),
+            EffectDescriptor(ToxicCalculatorEffect.self),
+            EffectDescriptor(MusicalTelepathyEffect.self),
+            EffectDescriptor(HapticLieDetectorShortcutEffect.self),
+            EffectDescriptor(FutureSelfieEffect.self),
+            EffectDescriptor(FrozenClockEffect.self),
+            EffectDescriptor(MessageFromBeyondEffect.self),
+            EffectDescriptor(CoinThroughScreenEffect.self),
+            EffectDescriptor(ControlledVirtualDiceEffect.self),
+            EffectDescriptor(BarcodeMindReaderEffect.self),
+            EffectDescriptor(PropheticBatteryEffect.self),
+            EffectDescriptor(ImpossibleWeatherEffect.self),
+            EffectDescriptor(GhostInstagramPostEffect.self),
+            EffectDescriptor(MindColorEffect.self),
+            EffectDescriptor(PsychicPastAgendaEffect.self),
+            EffectDescriptor(TelepathicUnlockEffect.self),
+            EffectDescriptor(SpiritistFlashEffect.self),
+            EffectDescriptor(ImpossibleWeightEffect.self)
         ]
     }
 
