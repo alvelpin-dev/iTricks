@@ -34,6 +34,8 @@ targets:
         NSAppleMusicUsageDescription: "iTricks puede buscar y reproducir canciones de tu biblioteca para el efecto de telepatía musical."
         NSPhotoLibraryUsageDescription: "iTricks necesita acceso a tus fotos para que elijas la imagen que se usará en algunos efectos."
         ITSAppUsesNonExceptionEncryption: false
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.itricks.app

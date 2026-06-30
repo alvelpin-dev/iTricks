@@ -48,7 +48,8 @@ final class EffectRepository {
             EffectDescriptor(PsychicPastAgendaEffect.self),
             EffectDescriptor(TelepathicUnlockEffect.self),
             EffectDescriptor(SpiritistFlashEffect.self),
-            EffectDescriptor(ImpossibleWeightEffect.self)
+            EffectDescriptor(ImpossibleWeightEffect.self),
+            EffectDescriptor(MagicTransferEffect.self)
         ]
     }
 
