@@ -173,31 +173,54 @@ private struct GhostInstagramPostSettingsView: View {
     @AppStorage("ghost_instagram_overlay_y") private var overlayY = 0.55
     @State private var selectedItem: PhotosPickerItem?
     @State private var previewData: Data?
+    @State private var imageSize: CGSize = .zero
 
     var body: some View {
         SecretConfigScreen(title: "El Post de Instagram Fantasma") {
             Section("Captura base de tu perfil") {
                 if let previewData, let image = UIImage(data: previewData) {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxHeight: 200)
-                        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.medium))
+                    ZStack(alignment: .topLeading) {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFit()
+                            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.medium))
+                            .background(
+                                GeometryReader { geo in
+                                    Color.clear
+                                        .onAppear { imageSize = geo.size }
+                                        .onChange(of: geo.size) { imageSize = $0 }
+                                }
+                            )
+                            .contentShape(Rectangle())
+                            .onTapGesture { location in
+                                guard imageSize != .zero else { return }
+                                overlayX = location.x / imageSize.width
+                                overlayY = location.y / imageSize.height
+                                HapticManager.shared.impact(.light)
+                            }
+
+                        if imageSize != .zero {
+                            Circle()
+                                .fill(Color.pink)
+                                .frame(width: 18, height: 18)
+                                .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                                .position(
+                                    x: overlayX * imageSize.width,
+                                    y: overlayY * imageSize.height
+                                )
+                                .allowsHitTesting(false)
+                        }
+                    }
+                    .frame(maxHeight: 300)
+
+                    Text("Toca sobre la imagen para marcar dónde aparecerá la palabra. El punto rosa muestra la posición actual.")
+                        .font(Theme.Typography.caption)
+                        .foregroundStyle(.secondary)
                 }
                 PhotosPicker("Elegir captura de pantalla", selection: $selectedItem, matching: .images)
             }
-            Section("Posición de la palabra sobre el papel") {
-                VStack(alignment: .leading) {
-                    Text("Horizontal")
-                    Slider(value: $overlayX, in: 0...1)
-                }
-                VStack(alignment: .leading) {
-                    Text("Vertical")
-                    Slider(value: $overlayY, in: 0...1)
-                }
-            }
             Section {
-                Text("Elige una captura de pantalla de tu propio perfil de Instagram, editada de antemano con el área del papel en blanco. La app superpondrá la palabra del espectador sobre esa zona en cada actuación.")
+                Text("Elige una captura de tu perfil de Instagram con el área del papel en blanco. Toca directamente sobre esa zona para fijar la posición donde se superpondrá la palabra del espectador.")
                     .font(Theme.Typography.caption)
                     .foregroundStyle(.secondary)
             } header: {

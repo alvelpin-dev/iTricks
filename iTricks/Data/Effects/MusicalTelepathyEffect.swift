@@ -77,13 +77,13 @@ enum MusicalTelepathyEffect: EffectModule {
 
 private struct MusicalTelepathyPerformView: View {
     @Environment(\.dismiss) private var dismiss
-    @AppStorage("musical_telepathy_songs") private var songsRaw = "Bohemian Rhapsody,Imagine,Yesterday"
+    @AppStorage("musical_telepathy_song1") private var song1 = "Bohemian Rhapsody"
+    @AppStorage("musical_telepathy_song2") private var song2 = "Imagine"
+    @AppStorage("musical_telepathy_song3") private var song3 = "Yesterday"
     @State private var isPlaying = false
     @State private var statusMessage: String?
 
-    private var songs: [String] {
-        songsRaw.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
-    }
+    private var songs: [String] { [song1, song2, song3].filter { !$0.isEmpty } }
 
     var body: some View {
         VStack(spacing: Theme.Spacing.lg) {
@@ -147,15 +147,26 @@ private struct MusicalTelepathyPerformView: View {
 }
 
 private struct MusicalTelepathySettingsView: View {
-    @AppStorage("musical_telepathy_songs") private var songsRaw = "Bohemian Rhapsody,Imagine,Yesterday"
+    @AppStorage("musical_telepathy_song1") private var song1 = "Bohemian Rhapsody"
+    @AppStorage("musical_telepathy_song2") private var song2 = "Imagine"
+    @AppStorage("musical_telepathy_song3") private var song3 = "Yesterday"
 
     var body: some View {
         SecretConfigScreen(title: "Telepatía Musical con Shazam") {
-            Section("Canciones forzables (separadas por comas)") {
-                TextField("Título 1, Título 2, Título 3", text: $songsRaw)
+            Section("Canción zona izquierda (toque 1)") {
+                TextField("Título exacto en tu biblioteca", text: $song1)
+                    .autocorrectionDisabled()
+            }
+            Section("Canción zona central (toque 2)") {
+                TextField("Título exacto en tu biblioteca", text: $song2)
+                    .autocorrectionDisabled()
+            }
+            Section("Canción zona derecha (toque 3)") {
+                TextField("Título exacto en tu biblioteca", text: $song3)
+                    .autocorrectionDisabled()
             }
             Section {
-                Text("Hay tres zonas táctiles ocultas en la parte inferior de la pantalla de actuación (izquierda, centro, derecha), una por cada canción en el orden en que las escribas aquí. Las canciones deben existir en tu biblioteca de Música para poder reproducirse.")
+                Text("Durante la actuación hay tres zonas ocultas en la parte inferior de la pantalla. Toca izquierda, centro o derecha para reproducir la canción correspondiente desde tu biblioteca de Apple Music. El título debe coincidir con el nombre exacto de la canción en tu biblioteca.")
                     .font(Theme.Typography.caption)
                     .foregroundStyle(.secondary)
             } header: {
